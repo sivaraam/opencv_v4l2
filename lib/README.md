@@ -16,7 +16,7 @@ This library exposes some APIs which could be used to:
  * de-initialise the V4L2 device
 
 #### Building
-To build and install the library
+To build and install the library separately
 
 ```
 mkdir build && cd build
@@ -26,8 +26,14 @@ sudo make install
 ```
 
 #### Disclaimer
+1. This library is provided for the ease of use for developers.
+   Anyone with a github account is welcome to contribute to it.
+   Please check the [CONTRIBUTING.md](../CONTRIBUTING.md) file to know more.
+   
+2. This is not a replacement to lib-v4l
+
+#### TODO
+
 1. The library maintains some global state across different
    functions. So, it is not suitable for accessing multiple
-   cameras simultaneously. Pull requests are welcome!
-
-2. This is not a replacement to lib-v4l
+   cameras simultaneously.
