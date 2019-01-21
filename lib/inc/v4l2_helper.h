@@ -47,7 +47,7 @@ int helper_release_cam_frame();
 
 int helper_deinit_cam();
 
-//int helper_change_cam_res(unsigned int width, unsigned int height, unsigned int format, enum io_method io_meth);
+int helper_change_cam_res(unsigned int width, unsigned int height, unsigned int format, enum io_method io_meth);
 
 //int helper_ctrl(unsigned int, int,int*);
 

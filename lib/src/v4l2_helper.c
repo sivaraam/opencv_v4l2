@@ -696,7 +696,7 @@ int helper_release_cam_frame()
 /**
  * Untested for misusages
  */
-/*
+
 int helper_change_cam_res(unsigned int width, unsigned int height, unsigned int format, enum io_method io_meth)
 {
 	if (!is_initialised)
@@ -707,7 +707,16 @@ int helper_change_cam_res(unsigned int width, unsigned int height, unsigned int 
 
 	if (
 		stop_capturing() < 0 ||
-		uninit_device() < 0 ||
+		uninit_device() < 0
+	)
+	{
+		fprintf(stderr, "Error occurred when ude-initializing device to change camera resolution\n");
+		return ERR;
+	}
+
+	is_initialised = 0;
+
+	if (
 		set_io_method(io_meth) < 0 ||
 		init_device(width,height,format) < 0 ||
 		start_capturing() < 0
@@ -717,9 +726,12 @@ int helper_change_cam_res(unsigned int width, unsigned int height, unsigned int 
 		return ERR;
 	}
 
+	is_initialised = 1;
+
 	return 0;
 }
 
+/*
 int helper_queryctrl(unsigned int id,struct v4l2_queryctrl* qctrl)
 {
 	if (!is_initialised)
