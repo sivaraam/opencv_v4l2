@@ -35,6 +35,7 @@ int main(int argc, char **argv)
 	unsigned int start, end, fps = 0;
 	unsigned char* ptr_cam_frame;
 	int bytes_used;
+	int acquired_frame_count = 0;
 
 	/*
 	 * Re-using the frame matrix(ces) instead of creating new ones (i.e., declaring 'Mat frame'
@@ -95,7 +96,7 @@ int main(int argc, char **argv)
 	 *
 	 * [1]: https://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/pixfmt-v4l2.html#c.v4l2_pix_format
 	 */
-	if (helper_init_cam(videodev, width, height, V4L2_PIX_FMT_UYVY, IO_METHOD_USERPTR) < 0) {
+	if (helper_init_cam(videodev, width, height, V4L2_PIX_FMT_YUYV, IO_METHOD_USERPTR) < 0) {
 		return EXIT_FAILURE;
 	}
 
@@ -128,7 +129,7 @@ int main(int argc, char **argv)
 	 */
 	yuyv_frame = Mat(height, width, CV_8UC2);
 	start = GetTickCount();
-	while(1) {
+	while(acquired_frame_count++ < 100) {
 		/*
 		 * Helper function to access camera data
 		 */
@@ -159,7 +160,7 @@ int main(int argc, char **argv)
 		 *
 		 * [3]: https://docs.opencv.org/3.4.2/d7/d1b/group__imgproc__misc.html#ga4e0972be5de079fed4e3a10e24ef5ef0
 		 */
-		cvtColor(yuyv_frame, preview, COLOR_YUV2BGR_UYVY);
+		cvtColor(yuyv_frame, preview, COLOR_YUV2BGR_YUYV);
 
 #ifdef ENABLE_DISPLAY
 	/*
@@ -211,6 +212,60 @@ int main(int argc, char **argv)
 		 * the reference counter is NULL, and the method has no effect in this case."
 		 * yuyv_frame.release();
 		 */
+	}
+
+	/*
+	 * Change resolution and stream some more frames in the new resolution
+	 */
+
+	width = 1920;
+	height = 1080;
+
+	fprintf(stderr, "Changing camera resolution to %ux%u\n", width, height);
+
+	helper_change_cam_res(width, height, V4L2_PIX_FMT_YUYV, IO_METHOD_USERPTR);
+
+	yuyv_frame = Mat(height, width, CV_8UC2);
+	while(acquired_frame_count++ < 200) {
+
+		if (helper_get_cam_frame(&ptr_cam_frame, &bytes_used) < 0) {
+			break;
+		}
+
+		yuyv_frame.data = ptr_cam_frame;
+		if(yuyv_frame.empty()) {
+			cout << "Img load failed" << endl;
+			break;
+		}
+
+		cvtColor(yuyv_frame, preview, COLOR_YUV2BGR_YUYV);
+
+#ifdef ENABLE_DISPLAY
+	#if (defined ENABLE_GL_DISPLAY) && (defined ENABLE_GPU_UPLOAD)
+		gpu_frame.upload(preview);
+		imshow("OpenCV V4L2", gpu_frame);
+	#else
+		imshow("OpenCV V4L2", preview);
+	#endif
+#endif
+
+		if (helper_release_cam_frame() < 0)
+		{
+			break;
+		}
+
+#ifdef ENABLE_DISPLAY
+		if(waitKey(1) == 27) break;
+#endif
+
+		fps++;
+		end = GetTickCount();
+		if ((end - start) >= 1000) {
+			cout << "fps = " << fps << endl ;
+			fps = 0;
+			start = end;
+		}
+
 	}
 
 	/*
