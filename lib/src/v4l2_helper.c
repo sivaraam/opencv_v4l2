@@ -79,6 +79,7 @@ static int set_io_method(enum io_method io_meth)
 static int stop_capturing(void)
 {
 	enum v4l2_buf_type type;
+	struct v4l2_requestbuffers req;
 
 	switch (io) {
 		case IO_METHOD_READ:
@@ -94,6 +95,23 @@ static int stop_capturing(void)
 				return ERR;
 			}
 			break;
+	}
+
+	CLEAR(req);
+
+	/*
+	 * Request to clear the buffers. This helps with changing resolution.
+	 */
+	req.count = 0;
+	req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	req.memory = V4L2_MEMORY_MMAP;
+
+	if (-1 == xioctl(fd, VIDIOC_REQBUFS, &req)) {
+		if (EINVAL == errno) {
+			fprintf(stderr, "The device does not support "
+					"memory mapping\n");
+		}
+		return ERR;
 	}
 
 	return 0;
@@ -678,6 +696,8 @@ int helper_release_cam_frame()
 /**
  * Untested for misusages
  */
+
+
 /*
 int helper_change_cam_res(unsigned int width, unsigned int height, unsigned int format, enum io_method io_meth)
 {
@@ -689,7 +709,16 @@ int helper_change_cam_res(unsigned int width, unsigned int height, unsigned int 
 
 	if (
 		stop_capturing() < 0 ||
-		uninit_device() < 0 ||
+		uninit_device() < 0
+	)
+	{
+		fprintf(stderr, "Error occurred when ude-initializing device to change camera resolution\n");
+		return ERR;
+	}
+
+	is_initialised = 0;
+
+	if (
 		set_io_method(io_meth) < 0 ||
 		init_device(width,height,format) < 0 ||
 		start_capturing() < 0
@@ -698,6 +727,8 @@ int helper_change_cam_res(unsigned int width, unsigned int height, unsigned int 
 		fprintf(stderr, "Error occurred when changing camera resolution\n");
 		return ERR;
 	}
+
+	is_initialised = 1;
 
 	return 0;
 }
